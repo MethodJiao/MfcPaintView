@@ -98,8 +98,27 @@ CMFCPaintDoc* CMFCPaintView::GetDocument() const // 非调试版本是内联的
 
 
 // CMFCPaintView 消息处理程序
-
-
+void CMFCPaintView::DynamicLine(CDC &MemDC, UINT nFlags, CPoint point)
+{
+	if ((nFlags & MK_LBUTTON) != 0)
+	{
+		MemDC.MoveTo(m_firstPoint);
+		MemDC.LineTo(point);
+	}
+}
+void CMFCPaintView::HighLightLine(CDC& MemDC, UINT nFlags, CPoint point, PaintLine line)
+{
+	CRect re = CRect(line.start, line.end);
+	re.NormalizeRect();
+	if (re.PtInRect(point))
+	{
+		CPen PenForDrawAxis1(PS_SOLID, 5, RGB(255, 0, 0));
+		HGDIOBJ oldpen = MemDC.SelectObject(PenForDrawAxis1);
+		MemDC.MoveTo(line.start);
+		MemDC.LineTo(line.end);
+		MemDC.SelectObject(oldpen);
+	}
+}
 void CMFCPaintView::OnMouseMove(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
@@ -116,34 +135,17 @@ void CMFCPaintView::OnMouseMove(UINT nFlags, CPoint point)
 	MemDC.FillSolidRect(0, 0, rect.Width(), rect.Height(), RGB(255, 255, 255));//填充初始颜色
 	CPen PenForDrawAxis(PS_SOLID, 2, RGB(0, 0, 0));
 	MemDC.SelectObject(PenForDrawAxis);
-	if ((nFlags & MK_LBUTTON) != 0)
-	{
-		MemDC.MoveTo(m_firstPoint);
-		MemDC.LineTo(point);
-	}
+	//动态线
+	DynamicLine(MemDC, nFlags, point);
+
 	for (size_t i = 0; i < m_lines.size(); i++)
 	{
+		//画已经绘制过的线
 		MemDC.MoveTo(m_lines[i].start);
 		MemDC.LineTo(m_lines[i].end);
-		//这段不必要 start
-		CRect re;
-		if (m_lines[i].start.x < m_lines[i].end.x)
-		{
-			re = CRect(m_lines[i].start, m_lines[i].end);
-		}
-		else
-		{
-			re = CRect(m_lines[i].end, m_lines[i].start);
 
-		}
-		if (re.PtInRect(point))
-		{
-			CPen PenForDrawAxis1(PS_SOLID, 5, RGB(255, 0, 0));
-			MemDC.SelectObject(PenForDrawAxis1);
-			MemDC.MoveTo(m_lines[i].start);
-			MemDC.LineTo(m_lines[i].end);
-		}
-		//end
+		//高亮
+		HighLightLine(MemDC, nFlags, point, m_lines[i]);
 	}
 	pDC->BitBlt(0, 0, rect.Width(), rect.Height(), &MemDC, 0, 0, SRCCOPY);
 
